@@ -20,17 +20,21 @@ const rGeocodeApi = (lat, lng) =>
   `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`;
 
 // Latitude, Longitutde, Altitude
-fetch(wbApiURL(2))
-  .then((response) => {
-    if (!response.ok) throw new Error(`HTTP error! ${response.status}`);
-    return response.json();
-  })
-  .then((data) => {
-    addBalloons(data);
-  })
-  .catch((err) => {
-    console.error("Fetch error:", err);
-  });
+
+(function goToTheSky(n) {
+  fetch(wbApiURL(n % nHours))
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP error! ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      addBalloons(data);
+    })
+    .catch((err) => {
+      console.error("Fetch error:", err);
+      goToTheSky(n + 1);
+    });
+})(0);
 
 // 1. Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -86,13 +90,6 @@ function latLongToVector3(lat, lon, radius) {
   return new THREE.Vector3(x, y, z);
 }
 
-// Example: Add a red marker at New York (40.7128° N, 74.0060° W)
-// const markerGeometry = new THREE.SphereGeometry(0.02, 8, 8);
-// const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-// const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-// marker.position.copy(latLongToVector3(40.7128, -74.006, 1.01));
-// scene.add(marker);
-
 // 8. Handle window resize
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -122,7 +119,6 @@ function addBalloons(data) {
       color: color,
     });
     const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-    //   marker.position.copy(latLongToVector3(lat, long, 1.01 + alt));
     marker.position.copy(latLongToVector3(lat, long, 1 + 0.003 * alt));
     marker.userData = { lat, long, alt };
     scene.add(marker);
@@ -143,7 +139,6 @@ function addBalloons(data) {
     if (intersects.length > 0) {
       const clicked = intersects[0].object;
       const info = clicked.userData;
-      //   console.log("Balloon clicked:", info);
 
       // spawn info box
       fetch(rGeocodeApi(info.lat, info.long))
@@ -152,7 +147,6 @@ function addBalloons(data) {
           return response.json();
         })
         .then((data) => {
-          //   console.log({ data });
           const city = data.city;
           const countryCode = data.countryCode;
           const continent = data.continent;
@@ -164,8 +158,6 @@ function addBalloons(data) {
         .catch((err) => {
           showBox(event, `error fetching data: ${err}`);
         });
-      // Here you can fetch reverse‑geocode / timezone / day‑night info for info.lat/info.lon
-      // Show UI panel or popup with info
     }
   }
 
